@@ -1,0 +1,90 @@
+\ifglsentryexists{cnn}{}%
+{%
+\gls@defglossaryentry{cnn}%
+{%
+name={CNN},%
+sort={CNN},%
+type={acronym},%
+first={Convolutional Neural Network\glsspace (CNN)},%
+firstplural={Convolutional Neural Networks\glsspace (CNNs)},%
+text={CNN},%
+plural={CNNs},%
+description={Convolutional Neural Network},%
+descriptionplural={Convolutional Neural Network\acrpluralsuffix },%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={Convolutional Neural Network},%
+longplural={Convolutional Neural Networks},%
+short={CNN},%
+shortplural={CNNs},%
+counter={page},%
+parent={},%
+%
+}%
+}%
+\ifglsentryexists{dim}{}%
+{%
+\gls@defglossaryentry{dim}%
+{%
+name={DIM},%
+sort={DIM},%
+type={main},%
+first={DIM},%
+firstplural={DIMs},%
+text={DIM},%
+plural={DIMs},%
+description={Divisive Input Manipulation. A method developed by Dr. Michael Spratling of King's College London, that WRITE THE DESCIPTION HERE},%
+descriptionplural={Divisive Input Manipulation. A method developed by Dr. Michael Spratling of King's College London, that WRITE THE DESCIPTION HERE},%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={},%
+longplural={},%
+short={},%
+shortplural={},%
+counter={page},%
+parent={},%
+%
+}%
+}%
+\ifglsentryexists{cc}{}%
+{%
+\gls@defglossaryentry{cc}%
+{%
+name={CC},%
+sort={CC},%
+type={acronym},%
+first={cross-correlation\glsspace (CC)},%
+firstplural={cross-correlations\glsspace (CCs)},%
+text={CC},%
+plural={CCs},%
+description={cross-correlation},%
+descriptionplural={cross-correlation\acrpluralsuffix },%
+symbol={\relax },%
+symbolplural={\relax },%
+user1={},%
+user2={},%
+user3={},%
+user4={},%
+user5={},%
+user6={},%
+long={cross-correlation},%
+longplural={cross-correlations},%
+short={CC},%
+shortplural={CCs},%
+counter={page},%
+parent={},%
+%
+}%
+}%

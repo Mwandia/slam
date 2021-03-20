@@ -1,0 +1,61 @@
+\documentclass[11pt]{m-report}
+
+\usepackage{color}
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{textgreek}
+\usepackage{url}
+\usepackage[utf8]{inputenc}
+\usepackage[page,toc,titletoc,title]{appendix}
+\usepackage[acronym]{glossaries}
+\usepackage[square,sort,comma,numbers]{natbib}
+\usepackage{mathtools}
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    filecolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+}
+
+
+\title{Simultaneous Localisation and Mapping}
+\author{Jeffrey Mwandia Ndumbu }
+\date{February 2021}
+
+
+\begin{document}
+\createFrontMatter
+\onehalfspacing
+\tableofcontents
+\doublespacing
+
+\include{chapters/introduction}
+\include{chapters/conclusion}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Glossary
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\printglossary
+\newacronym{cnn}{CNN}{Convolutional Neural Network}
+\newglossaryentry{dim}
+{
+    name=DIM,
+    description={Divisive Input Manipulation. A method developed by Dr. Michael Spratling of King's College London, that WRITE THE DESCIPTION HERE}
+}
+\newacronym{cc}{CC}{cross-correlation}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Bibliography
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

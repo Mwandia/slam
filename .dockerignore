@@ -1,0 +1,10 @@
+# folders
+/assets
+/docs
+/tests
+/logs
+__pycache__
+.DS_Store
+
+# etc
+.gitignore

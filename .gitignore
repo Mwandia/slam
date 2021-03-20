@@ -1,0 +1,22 @@
+# folders
+.DS_Store
+__pycache__
+/obj
+/bin
+/assets
+ 
+# data
+*Data*
+*.json
+*.csv
+*.sql
+*dump*
+ 
+# saved models
+*.pkl
+ 
+# linters
+*.eslintrc.json
+ 
+# environment variables
+*.env
