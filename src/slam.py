@@ -21,7 +21,7 @@ frames = []
 disp = Display(W, H)
 
 class Point(object):
-  def __init(self, loc):
+  def __init__(self, loc):
     self.location = loc
     self.frames = []
     self.idxs = []
