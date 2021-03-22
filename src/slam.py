@@ -9,14 +9,13 @@ import numpy as np
 from display import Display, Frame, Map, Point
 from extractor import denormalise, match_frames
 
-W, H= 1920//2, 1080//2
 F = 270
+W, H = 1920//2, 1080//2
 K = np.array([
   [F, 0, W//2],
   [0, F, H//2],
   [0, 0, 1]
 ])
-
 disp = Display(W, H)
 map = Map()
 

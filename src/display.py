@@ -45,30 +45,8 @@ class Display(object):
     # refresh
     self.window.refresh()
 
-class Point(object):
-  def __init__(self, map, loc):
-    self.location = loc
-    self.frames = []
-    self.idxs = []
-    self.id = len(map.points)
-    map.points.append(self)
-
-  def add_observation(self, frame, idx):
-    self.frames.append(frame)
-    self.idxs.append(idx)
-
-class Map(object):
-  def __init__(self):
-    self.frames = []
-    self.points = []
-
-  def display(self):
-    for f in self.frames:
-      print(f.id)
-      print(f.pose)      
-      print()
-
 class Frame(object):
+  
   def __init__(self, map, img, k):    
     self.img = img
     self.K = k
@@ -87,3 +65,28 @@ class Frame(object):
     if cv2.countNonZero(gray_version) == 0:
       return False
     return True
+
+class Map(object):
+  
+  def __init__(self):
+    self.frames = []
+    self.points = []
+
+  def display(self):
+    for f in self.frames:
+      print(f.id)
+      print(f.pose)      
+      print()
+
+class Point(object):
+  
+  def __init__(self, map, loc):
+    self.location = loc
+    self.frames = []
+    self.idxs = []
+    self.id = len(map.points)
+    map.points.append(self)
+
+  def add_observation(self, frame, idx):
+    self.frames.append(frame)
+    self.idxs.append(idx)

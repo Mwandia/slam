@@ -18,32 +18,6 @@ _ORB = cv2.ORB_create()
 def add_ones(x):
   return np.concatenate([x, np.ones((x.shape[0],1))], axis=1)
 
-def extractRt(E):
-  W = np.mat([
-    [0,-1,0],
-    [1,0,0],
-    [0,0,1]
-  ] ,dtype=float)
-  U,_,Vt = np.linalg.svd(E)
-
-  if np.linalg.det(Vt) < 0:
-    Vt *= -1.0
-
-  R = np.dot(np.dot(U, W), Vt)
-  if np.sum(R.diagonal()) < 0:
-    R = np.dot(np.dot(U, W.T), Vt)
-
-  t = U[:, 2]
-
-  ret = IRt
-  ret[:3, :3] = R
-  ret[:3, 3] = t
-  
-  return ret
-
-def normalise(Kinv, pts):
-  return np.dot(Kinv, add_ones(pts).T).T[:, 0:2]
-
 def denormalise(K, pt):
   ret = np.dot(K, np.array([pt[0], pt[1], 1.0]))
   ret /= ret[2]
@@ -67,7 +41,30 @@ def extract(img):
   kps, des = _ORB.compute(img, kps)
 
   return np.array([(kp.pt[0], kp.pt[1]) for kp in kps]), des
-    
+
+def extractRt(E):
+  W = np.mat([
+    [0,-1,0],
+    [1,0,0],
+    [0,0,1]
+  ] ,dtype=float)
+  U,_,Vt = np.linalg.svd(E)
+
+  if np.linalg.det(Vt) < 0:
+    Vt *= -1.0
+
+  R = np.dot(np.dot(U, W), Vt)
+  if np.sum(R.diagonal()) < 0:
+    R = np.dot(np.dot(U, W.T), Vt)
+
+  t = U[:, 2]
+
+  ret = IRt
+  ret[:3, :3] = R
+  ret[:3, 3] = t
+  
+  return ret
+
 def match_frames(f1, f2):    
   # matching features
   matches = _BF.knnMatch(f1.des, f2.des, k=2)
@@ -98,3 +95,6 @@ def match_frames(f1, f2):
   Rt = extractRt(model.params)
     
   return idx1[inliers], idx2[inliers], Rt
+
+def normalise(Kinv, pts):
+  return np.dot(Kinv, add_ones(pts).T).T[:, 0:2]
