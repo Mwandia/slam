@@ -12,8 +12,8 @@ _CORNERS = 3000
 _QUALITY = 0.01
 _MIN_DISTANCE = 3
 
-_ORB = cv2.ORB_create()
 _BF = cv2.BFMatcher(cv2.NORM_HAMMING)
+_ORB = cv2.ORB_create()
 
 def add_ones(x):
   return np.concatenate([x, np.ones((x.shape[0],1))], axis=1)
