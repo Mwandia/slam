@@ -68,7 +68,6 @@ def extract(img):
 
   return np.array([(kp.pt[0], kp.pt[1]) for kp in kps]), des
     
-
 def match_frames(f1, f2):    
   # matching features
   matches = _BF.knnMatch(f1.des, f2.des, k=2)
@@ -99,20 +98,3 @@ def match_frames(f1, f2):
   Rt = extractRt(model.params)
     
   return idx1[inliers], idx2[inliers], Rt
-
-class Frame(object):
-  def __init__(self, img, k):    
-    self.img = img
-    self.K = k
-    self.Kinv = np.linalg.inv(self.K)
-    self.pose = IRt
-    pts, self.des = extract(img)
-
-    if pts is not None:
-      self.pts = normalise(self.Kinv, pts)
-
-  def __bool__(self):
-    gray_version = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
-    if cv2.countNonZero(gray_version) == 0:
-      return False
-    return True

@@ -1,5 +1,9 @@
+import cv2
+import numpy as np
 import sdl2
 import sdl2.ext
+
+from extractor import extract, normalise, IRt
 
 class Display(object):
   """
@@ -40,3 +44,46 @@ class Display(object):
 
     # refresh
     self.window.refresh()
+
+class Point(object):
+  def __init__(self, map, loc):
+    self.location = loc
+    self.frames = []
+    self.idxs = []
+    self.id = len(map.points)
+    map.points.append(self)
+
+  def add_observation(self, frame, idx):
+    self.frames.append(frame)
+    self.idxs.append(idx)
+
+class Map(object):
+  def __init__(self):
+    self.frames = []
+    self.points = []
+
+  def display(self):
+    for f in self.frames:
+      print(f.id)
+      print(f.pose)      
+      print()
+
+class Frame(object):
+  def __init__(self, map, img, k):    
+    self.img = img
+    self.K = k
+    self.Kinv = np.linalg.inv(self.K)
+    self.pose = IRt
+    pts, self.des = extract(img)
+
+    if pts is not None:
+      self.pts = normalise(self.Kinv, pts)
+
+    self.id = len(map.frames)
+    map.frames.append(self)
+
+  def __bool__(self):
+    gray_version = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+    if cv2.countNonZero(gray_version) == 0:
+      return False
+    return True
