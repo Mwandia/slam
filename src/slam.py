@@ -54,6 +54,7 @@ def process_frame(img):
   # remove points behind camera and with little parallax
   good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0)
 
+  # create 3D points
   for i,p in enumerate(pts4d):
     if not good_pts4d[i]:
       continue
@@ -62,6 +63,7 @@ def process_frame(img):
     pt.add_observation(f1, idx1[i])
     pt.add_observation(f2, idx2[i])
 
+  # display matches and connect them by a line
   for pt1, pt2 in zip(f1.pts[idx1], f2.pts[idx2]):
     u1, v1 = denormalise(K, pt1)
     u2, v2 = denormalise(K, pt2)
