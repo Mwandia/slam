@@ -9,26 +9,18 @@ class Map(object):
     self.frames = []
     self.points = []
     self.state = None
-    self.q = Queue()
+    self.q = None
 
-    p = Process(target=self.viewer_thread, args=(self.q))
-    p.daemon = True
-    p.start()
+  def create_display(self):
+    self.q = Queue()
+    self.p = Process(target=self.viewer_thread, args=(self.q))
+    self.p.daemon = True
+    self.p.start()
 
   def display_thread(self, q):
     self.display_init(1024,768)
     while True:
       self.display_refresh(q)
-
-  def display(self):
-    poses, pts = [], []
-    for f in self.frames:
-     poses.append(f.pose)
-    
-    for p in self.points:
-      pts.append(p.pt)
-    
-    self.q.put((np.array(poses), np.array(pts)))
   
   def display_init(self, w, h):
 
@@ -66,6 +58,19 @@ class Map(object):
 
     pangolin.FinishFrame()
 
+  def display(self):
+    if self.q is None:
+      return
+      
+    poses, pts = [], []
+    for f in self.frames:
+     poses.append(f.pose)
+    
+    for p in self.points:
+      pts.append(p.pt)
+    
+    self.q.put((np.array(poses), np.array(pts)))
+
 class Point(object):
   
   def __init__(self, map, loc):
@@ -76,5 +81,6 @@ class Point(object):
     map.points.append(self)
 
   def add_observation(self, frame, idx):
+    frame.pts[idx] = self
     self.frames.append(frame)
     self.idxs.append(idx)

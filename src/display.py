@@ -54,10 +54,12 @@ class Frame(object):
     self.pose = IRt
     self.h, self.w = img.shape[0:2]
 
-    pts, self.des = extract(img)
+    kps, self.des = extract(img)
 
-    if pts is not None:
-      self.pts = normalise(self.Kinv, pts)
+    if kps is not None:
+      self.kps = normalise(self.Kinv, kps)
+      
+    self.pts = [None]*len(self.kps)
 
     self.id = len(map.frames)
     map.frames.append(self)
