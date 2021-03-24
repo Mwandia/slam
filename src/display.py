@@ -3,7 +3,7 @@ import numpy as np
 import sdl2
 import sdl2.ext
 
-from extractor import extract, normalise, IRt
+from extractor import extract, normalise
 
 class Display(object):
   """
@@ -51,7 +51,7 @@ class Frame(object):
     self.img = img
     self.K = k
     self.Kinv = np.linalg.inv(self.K)
-    self.pose = IRt
+    self.pose = np.eye(4)
     self.h, self.w = img.shape[0:2]
 
     kps, self.des = extract(img)

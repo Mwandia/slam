@@ -1,7 +1,10 @@
+import g2o
 import numpy as np
 import OpenGL.GL as gl
 import pangolin
 from multiprocessing import Process, Queue
+
+from extractor import poseRt
 
 class Map(object):
   
@@ -70,6 +73,66 @@ class Map(object):
       pts.append(p.pt)
     
     self.q.put((np.array(poses), np.array(pts)))
+  
+  def optimise(self):
+    # g2o optimiser
+    opt = g2o.SparseOptimizer()
+    solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3)
+    solver = g2o.OptimizationAlgorithmLevenberg(solver)
+    opt.set_algorithm(solver)
+
+    robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
+
+    # add frames to the graph
+    for f in self.frames:
+      pose = f.pose
+      
+      sbacam = g2o.SBACam(g2o.SE3Quat(pose[0:3, 0:3], pose[0:3, 3]))
+      sbacam.set_cam(f.K[0][0], f.K[1][1], f.K[2][0], f.K[2][1], 1.0)
+
+      v_se3 = g2o.VertexCam()
+      v_se3.set_id(f.id)
+      v_se3.set_estimate(sbacam)
+      v_se3.set_fixed(f.id <= 1)
+      opt.add_vertex(v_se3)
+
+    PT_ID_OFFSET = 0x10000
+    #add points to frames
+    for p in self.points:
+      pt = g2o.VertexSBAPointXYZ()
+      pt.set_id(p.id + PT_ID_OFFSET)
+      pt.set_estimate(p.pt[0:3])
+      pt.set_marginalized(True)
+      pt.set_fixed(False)
+      opt.add_vertex(pt)
+
+      for f in p.frames:
+        edge = g2o.EdgeProjectP2MC()
+        edge.set_vertex(0, pt)
+        edge.set_vertex(1, opt.vertex(f.id))
+        
+        uv = f.kps[f.pts.index(p)]
+        
+        edge.set_measurement(uv)
+        edge.set_information(np.eye(2))
+        edge.set_robust_kernel(robust_kernel)
+        opt.add_edge(edge)
+
+    opt.set_verbose(True)
+    opt.initialize_optimization()
+    opt.optimize(20)
+
+    # put frames back
+    for f in self.frames:
+      est = opt.vertex(f.id).estimate()
+      R = est.rotation().matrix()
+      t = est.translation()
+      f.pose = poseRt(R, t)
+
+    # put points back
+    for p in self.points:
+      est = opt.vertex(p.id + PT_ID_OFFSET).estimate()
+      p.pt = np.array(est)
 
 class Point(object):
   

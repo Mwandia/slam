@@ -3,7 +3,6 @@
 # TODO: find ways to integrate g2o
 
 import cv2
-#import g2o
 import numpy as np
 import os
 import sys
@@ -56,9 +55,9 @@ def process_frame(img):
   idx1, idx2, Rt = match_frames(f1, f2)
   f1.pose = np.dot(Rt, f2.pose)
 
-  for i in range(len(f2.pts)):
-    if f2.pts[i] is not None:
-      f2.pts
+  for i, idx in enumerate(idx2):
+    if f2.pts[idx] is not None:
+      f2.pts[idx].add_observation(f1, idx[i])
 
   # 3D coordinates
   pts4d = triangulate(
@@ -71,7 +70,7 @@ def process_frame(img):
   pts4d /= pts4d[:, 3:]
 
   # remove points behind camera and with little parallax
-  unmatched_pts = np.array([f1.pts[i] is None for i in idx1]).astype(np.bool)
+  unmatched_pts = np.array([f1.pts[i] is None for i in idx1])
   good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0) & unmatched_pts
 
   # create 3D points
@@ -92,6 +91,9 @@ def process_frame(img):
 
   if disp is not None:
     disp.paint(img)
+
+  if frame.id >= 4:
+    map.optimise()
   
   # 3D display
   map.display()

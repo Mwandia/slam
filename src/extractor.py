@@ -6,8 +6,6 @@ np.set_printoptions(suppress=True)
 from skimage.measure import ransac
 from skimage.transform import EssentialMatrixTransform
 
-IRt = np.eye(4)
-
 _CORNERS = 1000
 _QUALITY = 0.01
 _MIN_DISTANCE = 5
@@ -17,6 +15,12 @@ _ORB = cv2.ORB_create()
 
 def add_ones(x):
   return np.concatenate([x, np.ones((x.shape[0],1))], axis=1)
+
+def poseRt(R, t):
+  ret = np.eye(4)
+  ret[:3, :3] = R
+  ret[:3, 3] = t
+  return ret
 
 def denormalise(K, pt):
   ret = np.dot(K, np.array([pt[0], pt[1], 1.0]))
@@ -58,12 +62,8 @@ def extractRt(E):
     R = np.dot(np.dot(U, W.T), Vt)
 
   t = U[:, 2]
-
-  ret = IRt
-  ret[:3, :3] = R
-  ret[:3, 3] = t
   
-  return ret
+  return poseRt(R, t)
 
 def match_frames(f1, f2):    
   # matching features
