@@ -22,7 +22,7 @@ class Display(object):
     sdl2.ext.init()
 
     self.H, self.W = H, W
-    self.window = sdl2.ext.Window('3D reconstruction', size=(W,H), position=(-500,-500))
+    self.window = sdl2.ext.Window('3D reconstruction', size=(W,H))
 
     self.surface = self.window.get_surface()
     self.window.show()
@@ -65,67 +65,3 @@ class Frame(object):
     if cv2.countNonZero(gray_version) == 0:
       return False
     return True
-
-class Map(object):
-  
-  def __init__(self):
-    self.frames = []
-    self.points = []
-    self.display_init()
-
-  def display(self):
-    poses, pts = [], []
-    for f in self.frames:
-     poses.append(f.pose)
-    
-    for p in self.points:
-      pts.append(p.pt)
-    
-    self.state = poses, pts
-    self.display_refresh()
-  
-  def display_init(self):
-    import OpenGL.GL as gl
-    import pangolin
-
-    pangolin.CreateWindowAndBind('Main', 640, 480)
-    gl.glEnable(gl.GL_DEPTH_TEST)
-
-    self.scam = pangolin.OpenGlRenderState(
-      pangolin.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100)
-      pangolin.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin.AxisDirection.AxisY)
-    )
-    self.handler = pangolin.Handler3D(self.scam)
-
-    # interactive view
-    self.dcame = pangolin.CreateDisplay()
-    self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -640.0/480.0)
-    self.dcam.setHandler(self.handler)
-
-  def display_refresh(self):
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_BUFFER_BIT)
-    gl.glClearColor(1.0, 1.0, 1.0, 1.0)
-    self.dcam.Activate(self.scam)
-
-    gl.glPointSize(10)
-    gl.glColor3f(0.0, 1.0, 0.0)
-    pangolin.DrawPoints(d[:3, 3] for d in self.state[0])
-
-    gl.glPointSize(2)
-    gl.glColor3f(0.0, 1.0, 0.0)
-    pangolin.DrawPoints(d for d in self.state[1])
-
-    pangolin.FinishFrame()
-
-class Point(object):
-  
-  def __init__(self, map, loc):
-    self.location = loc
-    self.frames = []
-    self.idxs = []
-    self.id = len(map.points)
-    map.points.append(self)
-
-  def add_observation(self, frame, idx):
-    self.frames.append(frame)
-    self.idxs.append(idx)

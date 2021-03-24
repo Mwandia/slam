@@ -5,9 +5,11 @@
 import cv2
 #import g2o
 import numpy as np
+import os
 
-from display import Display, Frame, Map, Point
+from display import Display, Frame
 from extractor import denormalise, match_frames
+from map import Map, Point
 
 F = 270
 W, H = 1920//2, 1080//2
@@ -16,19 +18,14 @@ K = np.array([
   [0, F, H//2],
   [0, 0, 1]
 ])
-disp = Display(W, H)
+disp = Display(W, H) if os.getenv("D2D") is not None else None
 map = Map()
 
 def triangulate(pose1, pose2, pts1, pts2):
     return cv2.triangulatePoints(pose1[:3], pose2[:3], pts1.T, pts2.T).T
 
 def process_frame(img):
-  """
-  Draws circles on video feed to visualise extracted features.
 
-  Parameters:
-    img (numpy.ndarray): image to process
-  """
   img = cv2.resize(img, (W, H))
   frame = Frame(map, img, K)
 
@@ -70,7 +67,10 @@ def process_frame(img):
     cv2.circle(img, (u1, v1), color=(0,255,50), radius=3)
     cv2.line(img, (u1,v1), (u2,v2), color=(255,0,0))
 
-  disp.paint(img)
+  if disp is not None:
+    disp.paint(img)
+  
+  # 3D display
   map.display()
 
 if __name__ == "__main__":
