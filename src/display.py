@@ -52,6 +52,8 @@ class Frame(object):
     self.K = k
     self.Kinv = np.linalg.inv(self.K)
     self.pose = IRt
+    self.h, self.w = img.shape[0:2]
+
     pts, self.des = extract(img)
 
     if pts is not None:

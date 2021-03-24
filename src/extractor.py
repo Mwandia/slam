@@ -8,9 +8,9 @@ from skimage.transform import EssentialMatrixTransform
 
 IRt = np.eye(4)
 
-_CORNERS = 3000
+_CORNERS = 1000
 _QUALITY = 0.01
-_MIN_DISTANCE = 3
+_MIN_DISTANCE = 5
 
 _BF = cv2.BFMatcher(cv2.NORM_HAMMING)
 _ORB = cv2.ORB_create()
@@ -72,12 +72,14 @@ def match_frames(f1, f2):
 
   for m,n in matches:
     if m.distance < 0.75*n.distance:
-      idx1.append(m.queryIdx)
-      idx2.append(m.trainIdx)
-
       kp1 = f1.pts[m.queryIdx]
       kp2 = f2.pts[m.trainIdx]
-      ret.append((kp1,kp2))
+
+      if np.linalg.norm((kp1-kp2)) < 0.1:
+        idx1.append(m.queryIdx)
+        idx2.append(m.trainIdx)
+    
+        ret.append((kp1,kp2))
 
   # filter outliers
   assert len(ret) >= 8
@@ -89,7 +91,7 @@ def match_frames(f1, f2):
     EssentialMatrixTransform,
     min_samples=8,
     residual_threshold=0.005,
-    max_trials=250)
+    max_trials=100)
 
   # get return value and 'save' previous image points
   Rt = extractRt(model.params)

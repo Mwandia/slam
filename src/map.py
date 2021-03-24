@@ -12,11 +12,11 @@ class Map(object):
     self.q = Queue()
 
     p = Process(target=self.viewer_thread, args=(self.q))
-    p.daemon=True
+    p.daemon = True
     p.start()
 
   def display_thread(self, q):
-    self.display_init()
+    self.display_init(1024,768)
     while True:
       self.display_refresh(q)
 
@@ -28,43 +28,41 @@ class Map(object):
     for p in self.points:
       pts.append(p.pt)
     
-    self.q.put((poses, pts))
+    self.q.put((np.array(poses), np.array(pts)))
   
-  def display_init(self):
+  def display_init(self, w, h):
 
-    pangolin.CreateWindowAndBind('Main', 640, 480)
+    pangolin.CreateWindowAndBind('Main', w, h)
     gl.glEnable(gl.GL_DEPTH_TEST)
 
     self.scam = pangolin.OpenGlRenderState(
-      pangolin.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.2, 100),
-      pangolin.ModelViewLookAt(-2, 2, -2, 0, 0, 0, pangolin.AxisDirection.AxisY)
+      pangolin.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 10000),
+      pangolin.ModelViewLookAt(0, -10, -8, 0, 0, 0, 0, -1, 0)
     )
     self.handler = pangolin.Handler3D(self.scam)
 
     # interactive view
     self.dcame = pangolin.CreateDisplay()
-    self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -640.0/480.0)
+    self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -w/h)
     self.dcam.setHandler(self.handler)
 
   def display_refresh(self, q):
     if self.state is None or not q.empty():
       self.state = q.get()
 
-    ppts = np.array([d[:3, 3] for d in self.state[0]])
-    spts = np.array(self.state[1])
-
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_BUFFER_BIT)
+    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
     gl.glClearColor(1.0, 1.0, 1.0, 1.0)
     self.dcam.Activate(self.scam)
 
+    # draw poses
     gl.glPointSize(10)
     gl.glColor3f(0.0, 1.0, 0.0)
-    pangolin.DrawPoints(ppts)
+    pangolin.DrawPoints(self.state[0])
 
+    # draw keypoints
     gl.glPointSize(2)
-    gl.glColor3f(0.0, 1.0, 0.0)
-    pangolin.DrawPoints(d for d in self.state[1])
-    pangolin.DrawPoints(spts)
+    gl.glColor3f(1.0, 0.0, 0.0)
+    pangolin.DrawPoints(self.state[1])
 
     pangolin.FinishFrame()
 

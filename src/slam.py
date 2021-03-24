@@ -11,15 +11,19 @@ from display import Display, Frame
 from extractor import denormalise, match_frames
 from map import Map, Point
 
-F = 270
+F = 800
 W, H = 1920//2, 1080//2
 K = np.array([
   [F, 0, W//2],
   [0, F, H//2],
   [0, 0, 1]
 ])
-disp = Display(W, H) if os.getenv("D2D") is not None else None
+
 map = Map()
+disp = None
+if os.getenv("D2D") is not None:
+  disp = Display(W, H) 
+
 
 def triangulate(pose1, pose2, pts1, pts2):
   ret = np.zeros((pts1.shape[0], 4))
