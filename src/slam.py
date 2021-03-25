@@ -20,10 +20,7 @@ K = np.array([
 ])
 
 map = Map()
-disp = None
-if os.getenv("D2D") is not None:
-  disp = Display(W, H) 
-
+disp = None 
 
 def triangulate(pose1, pose2, pts1, pts2):
   ret = np.zeros((pts1.shape[0], 4))
@@ -60,18 +57,16 @@ def process_frame(img):
       f2.pts[idx].add_observation(f1, idx[i])
 
   # 3D coordinates
-  pts4d = triangulate(
-    f1.pose,
-    f2.pose,
-    f1.kps[idx1],
-    f2.kps[idx2]
-  )
-    
-  pts4d /= pts4d[:, 3:]
+  good_pts4d = np.array([f1.pts[i] is None for i in idx1])
 
-  # remove points behind camera and with little parallax
-  unmatched_pts = np.array([f1.pts[i] is None for i in idx1])
-  good_pts4d = (np.abs(pts4d[:, 3]) > 0.005) & (pts4d[:, 2] > 0) & unmatched_pts
+  # remove points with little parallax and points behind camera  
+  pts_tri_local = triangulate(Rt, np.eye(4), f1.kps[idx1], f2.kps[idx2])
+  good_pts4d &= np.abs(pts_tri_local[:, 3]) > 0.005
+
+  pts_tri_local /= pts_tri_local[:, 3:]
+  good_pts4d &= pts_tri_local[:, 2] > 0
+
+  pts4d = np.dot(np.linalg.inv(f1.pose), pts_tri_local.T).T
 
   # create 3D points
   for i,p in enumerate(pts4d):
@@ -94,13 +89,19 @@ def process_frame(img):
     disp.paint(img)
 
   if frame.id >= 4:
-    map.optimise()
+    err = map.optimise()
+    print(f"Optimise: {err} units of error")
   
   # 3D display
   map.display()
 
 if __name__ == "__main__":
   cap = cv2.VideoCapture("./assets/Seoul Bike Ride POV.mp4")
+
+  if os.getenv("D3D") is not None:
+    map.create_viewer()
+  if os.getenv("D2D") is not None:
+    disp = Display(W, H)
 
   while cap.isOpened():
     ret, frame = cap.read()

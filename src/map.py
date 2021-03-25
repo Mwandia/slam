@@ -6,11 +6,14 @@ from multiprocessing import Process, Queue
 
 from extractor import poseRt
 
+LOCAL_WINDOW = 20
+
 class Map(object):
   
   def __init__(self):
     self.frames = []
     self.points = []
+    self.max_point = 0
     self.state = None
     self.q = None
 
@@ -42,22 +45,22 @@ class Map(object):
     self.dcam.setHandler(self.handler)
 
   def display_refresh(self, q):
-    if self.state is None or not q.empty():
+    if not q.empty():
       self.state = q.get()
 
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
     gl.glClearColor(0.0, 0.0, 0.0, 1.0)
     self.dcam.Activate(self.scam)
 
-    # draw poses
-    gl.glPointSize(10)
-    gl.glColor3f(0.0, 1.0, 0.0)
-    pangolin.DrawPoints(self.state[0])
+    if self.state is not None:
+      # draw poses
+      gl.glColor3f(0.0, 1.0, 0.0)
+      pangolin.DrawPoints(self.state[0])
 
-    # draw keypoints
-    gl.glPointSize(5)
-    gl.glColor3f(1.0, 0.0, 0.0)
-    pangolin.DrawPoints(self.state[1], self.state[2])
+      # draw keypoints
+      gl.glPointSize(5)
+      gl.glColor3f(1.0, 0.0, 0.0)
+      pangolin.DrawPoints(self.state[1], self.state[2])
 
     pangolin.FinishFrame()
 
@@ -83,6 +86,7 @@ class Map(object):
     opt.set_algorithm(solver)
 
     robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
+    local_frames = self.frames[-LOCAL_WINDOW:]
 
     # add frames to the graph
     for f in self.frames:
@@ -94,12 +98,15 @@ class Map(object):
       v_se3 = g2o.VertexCam()
       v_se3.set_id(f.id)
       v_se3.set_estimate(sbacam)
-      v_se3.set_fixed(f.id <= 1)
+      v_se3.set_fixed(f.id <= 1 or f not in local_frames)
       opt.add_vertex(v_se3)
 
     PT_ID_OFFSET = 0x10000
     # add points to frames
     for p in self.points:
+      if not any([f in local_frames for f in p.frames]):
+        continue
+
       pt = g2o.VertexSBAPointXYZ()
       pt.set_id(p.id + PT_ID_OFFSET)
       pt.set_estimate(p.pt[0:3])
@@ -131,9 +138,39 @@ class Map(object):
       f.pose = poseRt(R, t)
 
     # put points back
+    new_points = []
     for p in self.points:
-      est = opt.vertex(p.id + PT_ID_OFFSET).estimate()
+      vertex = opt.vertex(p.id + PT_ID_OFFSET)
+      if vertex is None:
+        new_points.append(p)
+        continue
+      est = vertex.estimate()
+
+      # match old point
+      old_point = len(p.frames) == 2 and p.frames[-1] not in local_frames
+      
+      # projection errors
+      errs = []
+      for f in p.frames:
+        uv = f.kps[f.pts.index(p)]
+        proj = np.dot(
+          np.dot(f.K, np.linalg.inv(f.pose)[:3]),
+          np.array([est[0], est[1], est[2], 1.0])
+        )
+        proj = proj[0:2] / proj[2]
+        errs.appen(np.linalg.norm(proj-uv))
+
+      # get rid of bad points (i.e. culling moving objects)
+      if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
+        p.delete()
+        continue
+
       p.pt = np.array(est)
+      new_points.append(p)
+    
+    self.points = new_points
+
+    return opt.chi2()
 
 class Point(object):
   
@@ -143,10 +180,16 @@ class Point(object):
     self.idxs = []
     self.colour = np.copy(colour)
 
-    self.id = len(map.points)
+    self.id = map.max_point
+    map.max_point += 1
     map.points.append(self)
 
   def add_observation(self, frame, idx):
     frame.pts[idx] = self
     self.frames.append(frame)
     self.idxs.append(idx)
+
+  def delete(self):
+    for f in self.frames:
+      f.pts[f.pts.index(self)] = None
+    del self

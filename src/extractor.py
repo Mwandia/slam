@@ -1,14 +1,15 @@
 import cv2
 import numpy as np
+import os
 np.set_printoptions(suppress=True)
 # from numba import jit, cuda
 
 from skimage.measure import ransac
 from skimage.transform import EssentialMatrixTransform
 
-_CORNERS = 1000
+_CORNERS = 3000
 _QUALITY = 0.01
-_MIN_DISTANCE = 5
+_MIN_DISTANCE = 7
 
 _BF = cv2.BFMatcher(cv2.NORM_HAMMING)
 _ORB = cv2.ORB_create()
@@ -65,6 +66,8 @@ def extractRt(E):
     R = np.dot(np.dot(U, W.T), Vt)
 
   t = U[:, 2]
+  if os.getenv("REVERSE") is not None:
+    t *= -1
   
   return poseRt(R, t)
 
