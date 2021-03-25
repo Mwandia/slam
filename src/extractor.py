@@ -54,6 +54,9 @@ def extractRt(E):
   ] ,dtype=float)
   U,_,Vt = np.linalg.svd(E)
 
+  if np.linalg.det(U) < 0:
+    U *= -1.0
+
   if np.linalg.det(Vt) < 0:
     Vt *= -1.0
 

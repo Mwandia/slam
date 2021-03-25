@@ -46,7 +46,7 @@ class Map(object):
       self.state = q.get()
 
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-    gl.glClearColor(1.0, 1.0, 1.0, 1.0)
+    gl.glClearColor(0.0, 0.0, 0.0, 1.0)
     self.dcam.Activate(self.scam)
 
     # draw poses
@@ -55,9 +55,9 @@ class Map(object):
     pangolin.DrawPoints(self.state[0])
 
     # draw keypoints
-    gl.glPointSize(2)
+    gl.glPointSize(5)
     gl.glColor3f(1.0, 0.0, 0.0)
-    pangolin.DrawPoints(self.state[1])
+    pangolin.DrawPoints(self.state[1], self.state[2])
 
     pangolin.FinishFrame()
 
@@ -65,12 +65,13 @@ class Map(object):
     if self.q is None:
       return
       
-    poses, pts = [], []
+    poses, pts, colours = [], [], []
     for f in self.frames:
      poses.append(f.pose)
     
     for p in self.points:
       pts.append(p.pt)
+      colours.append(p.colour)
     
     self.q.put((np.array(poses), np.array(pts)))
   
@@ -97,7 +98,7 @@ class Map(object):
       opt.add_vertex(v_se3)
 
     PT_ID_OFFSET = 0x10000
-    #add points to frames
+    # add points to frames
     for p in self.points:
       pt = g2o.VertexSBAPointXYZ()
       pt.set_id(p.id + PT_ID_OFFSET)
@@ -120,7 +121,7 @@ class Map(object):
 
     opt.set_verbose(True)
     opt.initialize_optimization()
-    opt.optimize(20)
+    opt.optimize(50)
 
     # put frames back
     for f in self.frames:
@@ -136,10 +137,12 @@ class Map(object):
 
 class Point(object):
   
-  def __init__(self, map, loc):
+  def __init__(self, map, loc, colour):
     self.location = loc
     self.frames = []
     self.idxs = []
+    self.colour = np.copy(colour)
+
     self.id = len(map.points)
     map.points.append(self)
 
