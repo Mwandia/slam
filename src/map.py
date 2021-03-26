@@ -170,14 +170,15 @@ class Map(object):
         proj = proj[0:2] / proj[2]
         errs.appen(np.linalg.norm(proj-uv))
 
-      # get rid of bad points (i.e. culling moving objects)
-      # if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
-      #   p.delete()
-      #   continue
+        # get rid of bad points (i.e. culling moving objects)
+        if old_point or np.mean(errs) > 100:
+          p.delete()
+          continue
 
       p.pt = np.array(est)
       new_points.append(p)
     
+      print(f"Culled: {len(self.points) - len(new_points)} points")
       self.points = new_points
 
     return opt.chi2()
@@ -198,6 +199,9 @@ class Point(object):
     frame.pts[idx] = self
     self.frames.append(frame)
     self.idxs.append(idx)
+
+  def homogenous(self):
+    return np.array([self.pt[0], self.pt[1], self.pt[2], 1.0])
 
   def orb(self):
     f = self.frames[-1]

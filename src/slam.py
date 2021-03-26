@@ -2,6 +2,7 @@
 
 # TODO: find ways to integrate g2o
 
+from math import e
 import cv2
 import numpy as np
 import os
@@ -20,6 +21,10 @@ K = np.array([
 
 map = Map()
 disp = None 
+
+def hamming_distance(a, b):
+  r = (1 << np.arange(8))[:, None]
+  return np.count_nonzero((np.bitwise_xor(a,b) & r) != 0)
 
 def triangulate(pose1, pose2, pts1, pts2):
   ret = np.zeros((pts1.shape[0], 4))
@@ -63,6 +68,22 @@ def process_frame(img):
   # optimise pose
   pose_opt = map.optimise(local_window=1, fix_points=True)
 
+  # search projection
+  sbp_pts_count = 0
+  if len(map.points) > 0:
+    map_points = np.array([p.homogenous() for p in map.points])
+    proj = np.dot(np.dot(K, f1.pose[:3]) , map_points.T).T
+    proj = proj[:, 0:2] / proj[:, 2:]
+
+    for i, p in enumerate(map.points):
+      q = f1.kd.query_ball_point(proj[i], 5)
+      for m_idx in q:
+        if f1.pts[m_idx] is None:
+          o_dist = hamming_distance(p.orb(), f1.des[m_idx])
+          if o_dist < 32.0:
+            p.add_observation(f1, m_idx)
+            sbp_pts_count += 1
+
   # 3D coordinates
   good_pts4d = np.array([f1.pts[i] is None for i in idx1])
 
@@ -85,7 +106,7 @@ def process_frame(img):
       continue
 
     u,v = int(round(f1.kps[idx1[i], 0])), int(round(f1.kps[idx1[i], 1]))
-    pt = Point(map, p, img[v, u])
+    pt = Point(map, p[0:3], img[v, u])
     pt.add_observation(f1, idx1[i])
     pt.add_observation(f2, idx2[i])
 
@@ -105,6 +126,7 @@ def process_frame(img):
   
   # 3D display
   map.display()
+  print(f"Map: {len(map.points)} points, {len(map.frames)} frames")
 
 if __name__ == "__main__":
   cap = cv2.VideoCapture("./assets/Seoul Bike Ride POV.mp4")
