@@ -69,7 +69,7 @@ def extractRt(E):
   if os.getenv("REVERSE") is not None:
     t *= -1
   
-  return poseRt(R, t)
+  return np.linalg.inv(poseRt(R, t))
 
 def match_frames(f1, f2):    
   # matching features

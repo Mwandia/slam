@@ -5,7 +5,6 @@
 import cv2
 import numpy as np
 import os
-import sys
 
 from display import Display, Frame
 from extractor import denormalise, match_frames
@@ -50,23 +49,35 @@ def process_frame(img):
   f2 = map.frames[-2]
 
   idx1, idx2, Rt = match_frames(f1, f2)
-  f1.pose = np.dot(Rt, f2.pose)
+  
+  if frame.id < 5:
+    f1.pose = np.dot(Rt, f2.pose)
+  else:
+    velocity = np.dot(f2.pose, np.linalg.inv(map.frames[-3].pose))
+    f1.pose = np.dot(velocity, f2.pose)
 
   for i, idx in enumerate(idx2):
     if f2.pts[idx] is not None:
       f2.pts[idx].add_observation(f1, idx[i])
 
+  # optimise pose
+  pose_opt = map.optimise(local_window=1, fix_points=True)
+
   # 3D coordinates
   good_pts4d = np.array([f1.pts[i] is None for i in idx1])
 
-  # remove points with little parallax and points behind camera  
   pts_tri_local = triangulate(Rt, np.eye(4), f1.kps[idx1], f2.kps[idx2])
-  good_pts4d &= np.abs(pts_tri_local[:, 3]) > 0.005
-
   pts_tri_local /= pts_tri_local[:, 3:]
   good_pts4d &= pts_tri_local[:, 2] > 0
 
-  pts4d = np.dot(np.linalg.inv(f1.pose), pts_tri_local.T).T
+  # remove points with little parallax and points behind camera  
+  pts4d = triangulate(f1.pose, f2.pose, f1.kps[idx1], f2.kps[idx2])
+  good_pts4d &= np.abs(pts4d[:, 3]) > 0.005
+
+  pts4d /= pts4d[:, 3:]
+  good_pts4d &= pts4d[:, 2] > 0
+
+  pts4d = np.dot(np.linalg.inv(f1.pose), pts4d.T).T
 
   # create 3D points
   for i,p in enumerate(pts4d):
@@ -97,6 +108,13 @@ def process_frame(img):
 
 if __name__ == "__main__":
   cap = cv2.VideoCapture("./assets/Seoul Bike Ride POV.mp4")
+
+  # camera setup
+  W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+  H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+  F = int(os.getenv("F", "525"))
+  K = np.array([[F,0,W//2],[0,F,H//2],[0,0,1]])
+  Kinv = np.linalg.inv(K)
 
   if os.getenv("D3D") is not None:
     map.create_viewer()

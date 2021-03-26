@@ -20,6 +20,7 @@ def main():
     dcam = pangolin.CreateDisplay()
     dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -640.0/480.0)
     dcam.SetHandler(handler)
+    dcam.Resize(pangolin.Viewport(0, 0, 640*2, 480*2))
 
     while not pangolin.ShouldQuit():
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
@@ -38,6 +39,7 @@ def main():
 
         gl.glPointSize(2)
         gl.glColor3f(1.0, 0.0, 0.0)
+        
         # access numpy array directly(without copying data), array should be contiguous.
         pangolin.DrawPoints(points, colors)    
 

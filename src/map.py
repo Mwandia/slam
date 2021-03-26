@@ -41,8 +41,12 @@ class Map(object):
 
     # interactive view
     self.dcame = pangolin.CreateDisplay()
-    self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, -w/h)
+    self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, w/h)
     self.dcam.setHandler(self.handler)
+
+    # prevent small window init for pangolin
+    self.dcam.Resize(pangolin.Viewport(0, 0, w*2, h*2))
+    self.dcam.Activate()
 
   def display_refresh(self, q):
     if not q.empty():
@@ -70,7 +74,7 @@ class Map(object):
       
     poses, pts, colours = [], [], []
     for f in self.frames:
-     poses.append(f.pose)
+     poses.append(np.linalg.inv(f.pose))
     
     for p in self.points:
       pts.append(p.pt)
@@ -78,7 +82,7 @@ class Map(object):
     
     self.q.put((np.array(poses), np.array(pts)))
   
-  def optimise(self):
+  def optimise(self, local_window=LOCAL_WINDOW, fix_points=False, verbose=False):
     # g2o optimiser
     opt = g2o.SparseOptimizer()
     solver = g2o.BlockSolverSE3(g2o.LinearSolverCholmodSE3)
@@ -86,11 +90,15 @@ class Map(object):
     opt.set_algorithm(solver)
 
     robust_kernel = g2o.RobustKernelHuber(np.sqrt(5.991))
-    local_frames = self.frames[-LOCAL_WINDOW:]
+
+    if local_window is None:
+      local_frames = self.frames
+    else:
+      local_frames = self.frames[-local_window:]
 
     # add frames to the graph
     for f in self.frames:
-      pose = f.pose
+      pose = np.linalg.inv(f.pose)
       
       sbacam = g2o.SBACam(g2o.SE3Quat(pose[0:3, 0:3], pose[0:3, 3]))
       sbacam.set_cam(f.K[0][0], f.K[1][1], f.K[2][0], f.K[2][1], 1.0)
@@ -111,7 +119,7 @@ class Map(object):
       pt.set_id(p.id + PT_ID_OFFSET)
       pt.set_estimate(p.pt[0:3])
       pt.set_marginalized(True)
-      pt.set_fixed(False)
+      pt.set_fixed(fix_points)
       opt.add_vertex(pt)
 
       for f in p.frames:
@@ -126,7 +134,8 @@ class Map(object):
         edge.set_robust_kernel(robust_kernel)
         opt.add_edge(edge)
 
-    opt.set_verbose(True)
+    if verbose:
+      opt.set_verbose(True)
     opt.initialize_optimization()
     opt.optimize(50)
 
@@ -135,16 +144,17 @@ class Map(object):
       est = opt.vertex(f.id).estimate()
       R = est.rotation().matrix()
       t = est.translation()
-      f.pose = poseRt(R, t)
+      f.pose = np.linalg.inv(poseRt(R, t))
 
     # put points back
-    new_points = []
-    for p in self.points:
-      vertex = opt.vertex(p.id + PT_ID_OFFSET)
-      if vertex is None:
-        new_points.append(p)
-        continue
-      est = vertex.estimate()
+    if not fix_points:
+      new_points = []
+      for p in self.points:
+        vertex = opt.vertex(p.id + PT_ID_OFFSET)
+        if vertex is None:
+          new_points.append(p)
+          continue
+        est = vertex.estimate()
 
       # match old point
       old_point = len(p.frames) == 2 and p.frames[-1] not in local_frames
@@ -154,21 +164,21 @@ class Map(object):
       for f in p.frames:
         uv = f.kps[f.pts.index(p)]
         proj = np.dot(
-          np.dot(f.K, np.linalg.inv(f.pose)[:3]),
+          np.dot(f.K, f.pose[:3]),
           np.array([est[0], est[1], est[2], 1.0])
         )
         proj = proj[0:2] / proj[2]
         errs.appen(np.linalg.norm(proj-uv))
 
       # get rid of bad points (i.e. culling moving objects)
-      if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
-        p.delete()
-        continue
+      # if (old_point and np.mean(errs) > 30) or np.mean(errs) > 100:
+      #   p.delete()
+      #   continue
 
       p.pt = np.array(est)
       new_points.append(p)
     
-    self.points = new_points
+      self.points = new_points
 
     return opt.chi2()
 
@@ -188,6 +198,10 @@ class Point(object):
     frame.pts[idx] = self
     self.frames.append(frame)
     self.idxs.append(idx)
+
+  def orb(self):
+    f = self.frames[-1]
+    return f.des[f.pts.index(self)]
 
   def delete(self):
     for f in self.frames:
