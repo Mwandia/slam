@@ -6,6 +6,10 @@ import cv2
 import numpy as np
 import os
 import time
+import sys
+
+sys.path.append("bin/macosx")
+sys.path.append("bin/linux")
 
 from display import Display2D, Display3D, Frame
 from extractor import denormalise, match_frames
