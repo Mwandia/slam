@@ -123,26 +123,39 @@ class Display3D(object):
     
     self.q.put((np.array(poses), np.array(pts)))
 
-
 class Frame(object):
   
-  def __init__(self, map, img, k):    
+  def __init__(self, map, img, K, pose=np.eye(4)):    
     self.img = img
-    self.K = k
-    self.Kinv = np.linalg.inv(self.K)
-    self.pose = np.eye(4)
+    self.K = K
+    self.pose = pose
     self.h, self.w = img.shape[0:2]
 
-    kps, self.des = extract(img)
-    self.kd = cKDTree(self.kps)
-
-    if kps is not None:
-      self.kps = normalise(self.Kinv, kps)
-      
+    self.kps, self.des = extract(img)
     self.pts = [None]*len(self.kps)
 
-    self.id = len(map.frames)
-    map.frames.append(self)
+    self.id = map.add_frame(self)
+
+  @property
+  def Kinv(self):
+    if not hasattr(self, '_Kinv'):
+      self._Kinv = np.linalg.inv(self.K)
+
+    return self._Kinv
+
+  @property
+  def kps(self):
+    if not hasattr(self, '_kps'):
+      self._kps = normalise(self.Kinv, self.kpus)
+    
+    return self._kps
+
+  @property
+  def kd(self):
+    if not hasattr(self, '_kd'):
+      self._kd = cKDTree(self.kps)
+    
+    return self._kd
 
   def __bool__(self):
     gray_version = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)

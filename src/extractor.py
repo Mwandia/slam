@@ -81,7 +81,7 @@ def match_frames(f1, f2):
       kp1 = f1.kps[m.queryIdx]
       kp2 = f2.kps[m.trainIdx]
 
-      if np.linalg.norm((kp1-kp2)) < 0.1*np.linalg.norm([f1.w, f1.h]) and m.distance < 32:
+      if m.distance < 32:
         idx1.append(m.queryIdx)
         idx2.append(m.trainIdx)
     

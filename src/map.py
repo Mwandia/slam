@@ -1,5 +1,6 @@
 import g2o
 import numpy as np
+import json
 
 from extractor import poseRt
 
@@ -13,7 +14,19 @@ class Map(object):
     self.max_point = 0
     self.state = None
     self.q = None
-  
+    
+  def add_point(self, point):
+    ret = self.max_point
+    self.max_point += 1
+    self.points.append(point)
+    return ret
+
+  def add_frame(self, frame):
+    ret = self.max_frame
+    self.max_frame += 1
+    self.frames.append(frame)
+    return ret
+
   def optimise(self, local_window=LOCAL_WINDOW, fix_points=False, verbose=False):
     # g2o optimiser
     opt = g2o.SparseOptimizer()
@@ -123,9 +136,7 @@ class Point(object):
     self.idxs = []
     self.colour = np.copy(colour)
 
-    self.id = map.max_point
-    map.max_point += 1
-    map.points.append(self)
+    self.id = map.add_point(self)
 
   def add_observation(self, frame, idx):
     frame.pts[idx] = self
@@ -135,12 +146,8 @@ class Point(object):
   def homogenous(self):
     return np.array([self.pt[0], self.pt[1], self.pt[2], 1.0])
 
-  def orb(self):
-    des = []
-    for f in self.frames:
-      des.append(f.des[f.pts.index(self)])
-    
-    return des
+  def orb(self):  
+    return [f.des[f.pts.index(self)] for f in self.frames]
 
   def delete(self):
     for f in self.frames:
