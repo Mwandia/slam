@@ -144,7 +144,7 @@ class Map(object):
     if verbose:
       opt.set_verbose(True)
     opt.initialize_optimization()
-    opt.optimize(50)
+    opt.optimize(20)
 
     # put frames back
     for f in self.frames:

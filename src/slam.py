@@ -128,7 +128,7 @@ def process_frame(img):
         cv2.circle(img, (u1, v1), color=(0,128,0), radius=3)
     else:
       cv2.circle(img, (u1, v1), color=(0,0,0), radius=3)
-      
+
     cv2.line(img, (u1,v1), (u2,v2), color=(255,0,0))
 
   if disp is not None:
@@ -154,6 +154,9 @@ if __name__ == "__main__":
   F = int(os.getenv("F", "525"))
   K = np.array([[F,0,W//2],[0,F,H//2],[0,0,1]])
   Kinv = np.linalg.inv(K)
+
+  if os.getenv("STARTFRAME") is not None:
+    cap.set(cv2.CAP_PROP_POS_FRAMES, int(os.getenv("STARTFRAME")))
 
   if W > 1024:
     downscale = 1024.0/W
