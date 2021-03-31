@@ -67,6 +67,7 @@ def process_frame(img):
 
   # optimise pose
   pose_opt = map.optimise(local_window=1, fix_points=True)
+  print(f"Pose: {pose_opt}")
 
   # search projection
   sbp_pts_count = 0
@@ -75,7 +76,11 @@ def process_frame(img):
     proj = np.dot(np.dot(K, f1.pose[:3]) , map_points.T).T
     proj = proj[:, 0:2] / proj[:, 2:]
 
+    good_pts = (proj[:, 0] > 0) & (proj[:, 0] < W) & (proj[:, 1] > 0) & (proj[:, 1] < W)
+
     for i, p in enumerate(map.points):
+      if not good_pts[i]:
+        continue
       q = f1.kd.query_ball_point(proj[i], 5)
       for m_idx in q:
         if f1.pts[m_idx] is None:
@@ -111,16 +116,22 @@ def process_frame(img):
     pt.add_observation(f2, idx2[i])
 
   # display matches and connect them by a line
-  for pt1, pt2 in zip(f1.kps[idx1], f2.kps[idx2]):
+  for i1, i2 in zip(idx1, idx2):
+    pt1 = f1.kps[i1]
+    pt2 = f2.kps[i2]
     u1, v1 = denormalise(K, pt1)
     u2, v2 = denormalise(K, pt2)
-    cv2.circle(img, (u1, v1), color=(0,255,50), radius=3)
+
+    if f1.pts[i1] is not None:
+      cv2.circle(img, (u1, v1), color=(0,255,0), radius=3)
+    else:
+      cv2.circle(img, (u1, v1), color=(0,0,255), radius=3)
     cv2.line(img, (u1,v1), (u2,v2), color=(255,0,0))
 
   if disp is not None:
     disp.paint(img)
 
-  if frame.id >= 4:
+  if frame.id >= 4 and frame.id%3 == 0:
     err = map.optimise()
     print(f"Optimise: {err} units of error")
   
@@ -130,6 +141,7 @@ def process_frame(img):
 
 if __name__ == "__main__":
   cap = cv2.VideoCapture("./assets/Seoul Bike Ride POV.mp4")
+  map.create_viewer()
 
   # camera setup
   W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -138,10 +150,13 @@ if __name__ == "__main__":
   K = np.array([[F,0,W//2],[0,F,H//2],[0,0,1]])
   Kinv = np.linalg.inv(K)
 
-  if os.getenv("D3D") is not None:
-    map.create_viewer()
-  if os.getenv("D2D") is not None:
-    disp = Display(W, H)
+  if W > 1024:
+    downscale = 1024.0/W
+    F *= downscale
+    H = int(H * downscale)
+    W = 1024
+
+  disp = Display(W, H)
 
   while cap.isOpened():
     ret, frame = cap.read()

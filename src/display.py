@@ -3,7 +3,7 @@ import numpy as np
 import sdl2
 import sdl2.ext
 
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree
 
 from extractor import extract, normalise
 
@@ -57,7 +57,7 @@ class Frame(object):
     self.h, self.w = img.shape[0:2]
 
     kps, self.des = extract(img)
-    self.kd = KDTree(self.kps)
+    self.kd = cKDTree(self.kps)
 
     if kps is not None:
       self.kps = normalise(self.Kinv, kps)
