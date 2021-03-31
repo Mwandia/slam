@@ -178,7 +178,7 @@ class Map(object):
         errs.appen(np.linalg.norm(proj-uv))
 
         # get rid of bad points (i.e. culling moving objects)
-        if old_point or np.mean(errs) > 100:
+        if old_point or np.mean(errs) > 5:
           p.delete()
           continue
 

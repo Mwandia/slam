@@ -6,6 +6,7 @@ from math import e
 import cv2
 import numpy as np
 import os
+import time
 
 from display import Display, Frame
 from extractor import denormalise, match_frames
@@ -43,7 +44,7 @@ def triangulate(pose1, pose2, pts1, pts2):
   return ret
 
 def process_frame(img):
-
+  start_time = time.time()
   img = cv2.resize(img, (W, H))
   frame = Frame(map, img, K)
 
@@ -92,16 +93,14 @@ def process_frame(img):
   # 3D coordinates
   good_pts4d = np.array([f1.pts[i] is None for i in idx1])
 
-  pts_tri_local = triangulate(Rt, np.eye(4), f1.kps[idx1], f2.kps[idx2])
-  pts_tri_local /= pts_tri_local[:, 3:]
-  good_pts4d &= pts_tri_local[:, 2] > 0
-
   # remove points with little parallax and points behind camera  
   pts4d = triangulate(f1.pose, f2.pose, f1.kps[idx1], f2.kps[idx2])
   good_pts4d &= np.abs(pts4d[:, 3]) > 0.005
 
   pts4d /= pts4d[:, 3:]
-  good_pts4d &= pts4d[:, 2] > 0
+
+  pts_tri_local = np.dot(f1.pose, pts4d.T).T
+  good_pts4d &= pts_tri_local[:, 2] > 0
 
   pts4d = np.dot(np.linalg.inv(f1.pose), pts4d.T).T
 
@@ -123,21 +122,27 @@ def process_frame(img):
     u2, v2 = denormalise(K, pt2)
 
     if f1.pts[i1] is not None:
-      cv2.circle(img, (u1, v1), color=(0,255,0), radius=3)
+      if len(f1.pts[i1].frames) >= 5:
+        cv2.circle(img, (u1, v1), color=(0,255,0), radius=3)
+      else:
+        cv2.circle(img, (u1, v1), color=(0,128,0), radius=3)
     else:
-      cv2.circle(img, (u1, v1), color=(0,0,255), radius=3)
+      cv2.circle(img, (u1, v1), color=(0,0,0), radius=3)
+      
     cv2.line(img, (u1,v1), (u2,v2), color=(255,0,0))
 
   if disp is not None:
     disp.paint(img)
 
-  if frame.id >= 4 and frame.id%3 == 0:
+  if frame.id >= 4 and frame.id%5 == 0:
     err = map.optimise()
     print(f"Optimise: {err} units of error")
   
   # 3D display
   map.display()
+
   print(f"Map: {len(map.points)} points, {len(map.frames)} frames")
+  print(f"Time: {(time.time()-start_time)*1000.0}ms")
 
 if __name__ == "__main__":
   cap = cv2.VideoCapture("./assets/Seoul Bike Ride POV.mp4")
