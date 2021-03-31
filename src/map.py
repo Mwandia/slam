@@ -1,8 +1,5 @@
 import g2o
 import numpy as np
-import OpenGL.GL as gl
-import pangolin
-from multiprocessing import Process, Queue
 
 from extractor import poseRt
 
@@ -16,78 +13,6 @@ class Map(object):
     self.max_point = 0
     self.state = None
     self.q = None
-
-  def create_display(self):
-    self.q = Queue()
-    self.p = Process(target=self.viewer_thread, args=(self.q))
-    self.p.daemon = True
-    self.p.start()
-
-  def display_thread(self, q):
-    self.display_init(1024,768)
-    while True:
-      self.display_refresh(q)
-  
-  def display_init(self, w, h):
-
-    pangolin.CreateWindowAndBind('Main', w, h)
-    gl.glEnable(gl.GL_DEPTH_TEST)
-
-    self.scam = pangolin.OpenGlRenderState(
-      pangolin.ProjectionMatrix(w, h, 420, 420, w//2, h//2, 0.2, 10000),
-      pangolin.ModelViewLookAt(0, -10, -8, 0, 0, 0, 0, -1, 0)
-    )
-    self.handler = pangolin.Handler3D(self.scam)
-
-    # interactive view
-    self.dcame = pangolin.CreateDisplay()
-    self.dcam.SetBounds(0.0, 1.0, 0.0, 1.0, w/h)
-    self.dcam.setHandler(self.handler)
-
-    # prevent small window init for pangolin
-    self.dcam.Resize(pangolin.Viewport(0, 0, w*2, h*2))
-    self.dcam.Activate()
-
-  def display_refresh(self, q):
-    if not q.empty():
-      self.state = q.get()
-
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-    gl.glClearColor(0.0, 0.0, 0.0, 1.0)
-    self.dcam.Activate(self.scam)
-
-    if self.state is not None:
-      if self.state[0].shape[0] >= 2:
-        # draw poses
-        gl.glColor3f(0.0, 1.0, 0.0)
-        pangolin.DrawPoints(self.state[0])
-
-      if self.state[0].shape[0] >= 1:
-        # draw current pose as yellow
-        gl.glColor4f(1.0, 1.0, 0.0)
-        pangolin.DrawCameras(self.state[0][-1:])
-
-      if self.state[1].shape[0] != 0:
-        # draw keypoints
-        gl.glPointSize(5)
-        gl.glColor3f(1.0, 0.0, 0.0)
-        pangolin.DrawPoints(self.state[1], self.state[2])
-
-    pangolin.FinishFrame()
-
-  def display(self):
-    if self.q is None:
-      return
-      
-    poses, pts, colours = [], [], []
-    for f in self.frames:
-     poses.append(np.linalg.inv(f.pose))
-    
-    for p in self.points:
-      pts.append(p.pt)
-      colours.append(p.colour)
-    
-    self.q.put((np.array(poses), np.array(pts)))
   
   def optimise(self, local_window=LOCAL_WINDOW, fix_points=False, verbose=False):
     # g2o optimiser
@@ -164,7 +89,7 @@ class Map(object):
         est = vertex.estimate()
 
       # match old point
-      old_point = len(p.frames) == 2 and p.frames[-1] not in local_frames
+      old_point = len(p.frames) <= 3 and p.frames[-1] not in local_frames
       
       # projection errors
       errs = []
@@ -211,8 +136,11 @@ class Point(object):
     return np.array([self.pt[0], self.pt[1], self.pt[2], 1.0])
 
   def orb(self):
-    f = self.frames[-1]
-    return f.des[f.pts.index(self)]
+    des = []
+    for f in self.frames:
+      des.append(f.des[f.pts.index(self)])
+    
+    return des
 
   def delete(self):
     for f in self.frames:

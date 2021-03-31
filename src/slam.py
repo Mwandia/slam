@@ -2,13 +2,12 @@
 
 # TODO: find ways to integrate g2o
 
-from math import e
 import cv2
 import numpy as np
 import os
 import time
 
-from display import Display, Frame
+from display import Display2D, Display3D, Frame
 from extractor import denormalise, match_frames
 from map import Map, Point
 
@@ -21,7 +20,8 @@ K = np.array([
 ])
 
 map = Map()
-disp = None 
+disp2D = None 
+disp3D = None 
 
 def hamming_distance(a, b):
   r = (1 << np.arange(8))[:, None]
@@ -85,10 +85,12 @@ def process_frame(img):
       q = f1.kd.query_ball_point(proj[i], 5)
       for m_idx in q:
         if f1.pts[m_idx] is None:
-          o_dist = hamming_distance(p.orb(), f1.des[m_idx])
-          if o_dist < 32.0:
-            p.add_observation(f1, m_idx)
-            sbp_pts_count += 1
+          for o in p.orb():
+            o_dist = hamming_distance(p.orb(), f1.des[m_idx])
+            if o_dist < 32.0:
+              p.add_observation(f1, m_idx)
+              sbp_pts_count += 1
+              break
 
   # 3D coordinates
   good_pts4d = np.array([f1.pts[i] is None for i in idx1])
@@ -99,8 +101,8 @@ def process_frame(img):
 
   pts4d /= pts4d[:, 3:]
 
-  pts_tri_local = np.dot(f1.pose, pts4d.T).T
-  good_pts4d &= pts_tri_local[:, 2] > 0
+  # pts_tri_local = np.dot(f1.pose, pts4d.T).T
+  # good_pts4d &= pts_tri_local[:, 2] > 0
 
   pts4d = np.dot(np.linalg.inv(f1.pose), pts4d.T).T
 
@@ -131,8 +133,8 @@ def process_frame(img):
 
     cv2.line(img, (u1,v1), (u2,v2), color=(255,0,0))
 
-  if disp is not None:
-    disp.paint(img)
+  if disp2D is not None:
+    disp2D.paint(img)
 
   if frame.id >= 4 and frame.id%5 == 0:
     err = map.optimise()
@@ -140,23 +142,28 @@ def process_frame(img):
   
   # 3D display
   map.display()
+  if disp3D is not None:
+    disp3D.paint(map)
 
   print(f"Map: {len(map.points)} points, {len(map.frames)} frames")
   print(f"Time: {(time.time()-start_time)*1000.0}ms")
 
 if __name__ == "__main__":
   cap = cv2.VideoCapture("./assets/Seoul Bike Ride POV.mp4")
-  map.create_viewer()
+  disp3D = Display3D()
 
   # camera setup
   W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
   H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+  TF = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) # total frames
+  SF = 0 # start frame
   F = int(os.getenv("F", "525"))
   K = np.array([[F,0,W//2],[0,F,H//2],[0,0,1]])
   Kinv = np.linalg.inv(K)
 
   if os.getenv("STARTFRAME") is not None:
-    cap.set(cv2.CAP_PROP_POS_FRAMES, int(os.getenv("STARTFRAME")))
+    SF = int(os.getenv("STARTFRAME"))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, SF)
 
   if W > 1024:
     downscale = 1024.0/W
@@ -164,11 +171,16 @@ if __name__ == "__main__":
     H = int(H * downscale)
     W = 1024
 
-  disp = Display(W, H)
+  disp2D = Display2D(W, H)
+
+  i = SF
 
   while cap.isOpened():
     ret, frame = cap.read()
     if ret == True:
+      print(f"Frame {i}/{TF}")
       process_frame(frame)
     else:
       break
+
+    i += 1
